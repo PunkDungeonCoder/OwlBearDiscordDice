@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Броски GMENTOR</title>
+<style>
+  :root { color-scheme: dark; --bg:#1f2230; --fg:#e8e9f0; --muted:#9a9db0; --line:#343850; --ok:#4cae6a; --bad:#d9534f; --crit-ok:#e0b43c; --crit-bad:#ff2d3d; }
+  :root[data-mode="light"] { color-scheme: light; --bg:#f6f6f9; --fg:#1d1f2b; --muted:#6a6d80; --line:#d8d9e2; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:12px; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
+  h1 { font-size:15px; margin:0 0 10px; font-weight:600; }
+  #log { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .roll { display:grid; grid-template-columns:32px 1fr; gap:10px; padding:8px 10px; border-left:4px solid var(--line); background:color-mix(in srgb, var(--fg) 6%, transparent); border-radius:0 6px 6px 0; }
+  .roll.success { border-color:var(--ok); } .roll.failure { border-color:var(--bad); }
+  .roll.crit-success { border-color:var(--crit-ok); } .roll.crit-failure { border-color:var(--crit-bad); }
+  .avatar { width:32px; height:32px; border-radius:50%; background:var(--line); object-fit:cover; }
+  .who { font-weight:600; } .what { color:var(--muted); }
+  .result { margin-top:2px; font-weight:600; }
+  .success .result { color:var(--ok); } .failure .result { color:var(--bad); }
+  .crit-success .result { color:var(--crit-ok); } .crit-failure .result { color:var(--crit-bad); }
+  #empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>Броски</h1>
+<p id="empty">Бросков пока нет. Они появятся здесь, когда игрок бросит кубы в GMENTOR.</p>
+<ul id="log"></ul>
+
+<script type="module">
+  import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3/+esm";
+  import { SERVER } from "./config.js";
+
+  const log = document.getElementById('log');
+  const empty = document.getElementById('empty');
+  const seen = new Set();
+
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  function add(r) {
+    if (seen.has(r.id)) return;
+    seen.add(r.id);
+    empty.hidden = true;
+
+    const li = el('li', `roll ${r.outcome}`);
+    const img = el('img', 'avatar');
+    if (typeof r.avatar === 'string' && r.avatar.startsWith('https://')) img.src = r.avatar;
+    img.alt = '';
+
+    const body = el('div');
+    body.append(el('div', 'who', r.character));
+    const dice = r.dice?.length ? `${r.dice.join(' + ')} = ${r.total}` : `${r.total}`;
+    const mod = r.modifier ? `, мод. ${r.modifier > 0 ? '+' : ''}${r.modifier}` : '';
+    body.append(el('div', 'what', `${r.skill} — ${dice} против ${r.target}${mod}`));
+    body.append(el('div', 'result', r.margin != null ? `${r.label} на ${r.margin}` : r.label));
+
+    li.append(img, body);
+    log.prepend(li);
+    while (log.children.length > 50) log.lastChild.remove();
+  }
+
+  OBR.onReady(async () => {
+    const applyTheme = (t) => { document.documentElement.dataset.mode = t.mode.toLowerCase(); };
+    applyTheme(await OBR.theme.getTheme());
+    OBR.theme.onChange(applyTheme);
+
+    try { (await (await fetch(`${SERVER}/history`)).json()).forEach(add); } catch (e) { console.warn('history', e); }
+    new EventSource(`${SERVER}/events`).onmessage = (e) => add(JSON.parse(e.data));
+  });
+</script>
+</body></html>

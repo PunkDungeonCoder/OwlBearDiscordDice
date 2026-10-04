@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>GMENTOR Rolls (background)</title></head>
+<body>
+<script type="module">
+  import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3/+esm";
+  import { SERVER } from "./config.js";
+
+  OBR.onReady(() => {
+    const es = new EventSource(`${SERVER}/events`);
+    es.onmessage = (e) => {
+      const r = JSON.parse(e.data);
+      const dice = r.total != null ? `${r.total} против ${r.target}` : '';
+      const margin = r.margin != null ? ` на ${r.margin}` : '';
+      const variant = r.outcome.endsWith('success') ? 'SUCCESS' : 'ERROR';
+      OBR.notification.show(`${r.character}: ${r.skill} — ${dice}, ${r.label}${margin}`, variant);
+    };
+  });
+</script>
+</body></html>

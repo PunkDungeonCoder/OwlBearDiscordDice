@@ -1,0 +1,16 @@
+{
+  "name": "GMENTOR Rolls",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "description": "Показывает броски из GMENTOR в Owlbear Rodeo",
+  "author": "GM",
+  "icon": "/icon.svg",
+  "action": {
+    "title": "Броски GMENTOR",
+    "icon": "/icon.svg",
+    "popover": "/index.html",
+    "width": 340,
+    "height": 460
+  },
+  "background_url": "/background.html"
+}
